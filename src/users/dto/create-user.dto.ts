@@ -1,14 +1,15 @@
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsOptional, MinLength } from 'class-validator';
+import { UserRole } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
   @ApiProperty({
-    example: 'John',
-    description: 'The first name of the user',
+    example: 'John Doe',
+    description: 'The name of the user',
     examples: {
       'Valid Name': {
-        value: 'John',
-        summary: 'A valid first name'
+        value: 'John Doe',
+        summary: 'A valid full name'
       },
       'Empty Name': {
         value: '',
@@ -17,28 +18,11 @@ export class CreateUserDto {
     }
   })
   @IsString()
-  firstName: string;
-
-  @ApiProperty({
-    example: 'Doe',
-    description: 'The last name of the user',
-    examples: {
-      'Valid Name': {
-        value: 'Doe',
-        summary: 'A valid last name'
-      },
-      'Empty Name': {
-        value: '',
-        summary: 'An empty name that will fail validation'
-      }
-    }
-  })
-  @IsString()
-  lastName: string;
+  name: string;
 
   @ApiProperty({
     example: 'john.doe@example.com',
-    description: 'The email address of the user',
+    description: 'The email of the user',
     examples: {
       'Valid Email': {
         value: 'john.doe@example.com',
@@ -55,7 +39,7 @@ export class CreateUserDto {
 
   @ApiProperty({
     example: 'Password123!',
-    description: 'The password of the user (minimum 8 characters)',
+    description: 'The password of the user',
     minLength: 8,
     examples: {
       'Valid Password': {
@@ -75,7 +59,7 @@ export class CreateUserDto {
   @ApiProperty({
     example: 'client_admin',
     description: 'The role of the user',
-    enum: ['admin', 'client_admin', 'client_user'],
+    enum: UserRole,
     examples: {
       'Client Admin': {
         value: 'client_admin',
@@ -95,6 +79,25 @@ export class CreateUserDto {
       }
     }
   })
+  @IsEnum(UserRole)
+  role: UserRole;
+
+  @ApiProperty({
+    example: '+1234567890',
+    description: 'The phone number of the user',
+    required: false,
+    examples: {
+      'Valid Phone': {
+        value: '+1-555-555-5555',
+        summary: 'A valid phone number'
+      },
+      'Invalid Phone': {
+        value: 'invalid-phone',
+        summary: 'An invalid phone number that will fail validation'
+      }
+    }
+  })
   @IsString()
-  role: string;
+  @IsOptional()
+  phone?: string;
 } 

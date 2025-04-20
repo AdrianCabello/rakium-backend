@@ -1,48 +1,30 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto, RegisterDto, AuthResponse } from './dto/auth.dto';
+import { RegisterDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
-import { UserRole } from '../common/interfaces/auth.interface';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
+    private prisma: PrismaService,
+    private jwtService: JwtService,
   ) {}
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async validateUser(email: string, password: string): Promise<Omit<User, 'password'> | null> {
     const user = await this.prisma.user.findUnique({
-      where: { email: loginDto.email },
-      include: { tenant: true }
+      where: { email },
     });
 
-    if (!user || !(await bcrypt.compare(loginDto.password, user.password))) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const { password, ...result } = user;
+      return result;
     }
-
-    return this.generateTokens(user);
+    return null;
   }
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    // Verificar si el tenant existe
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: registerDto.tenantId },
-    });
-
-    if (!tenant) {
-      throw new NotFoundException(`Tenant ${registerDto.tenantId} not found`);
-    }
-
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: registerDto.email },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Email already exists');
-    }
-
+  async register(registerDto: RegisterDto) {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
     const user = await this.prisma.user.create({
@@ -50,24 +32,56 @@ export class AuthService {
         name: registerDto.name,
         email: registerDto.email,
         password: hashedPassword,
-        role: 'client_user',
-        tenant: {
-          connect: { id: registerDto.tenantId }
-        }
+        role: 'client_admin',
+        phone: null,
+        rakiumClientId: null,
       },
-      include: { tenant: true }
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        rakiumClientId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return this.generateTokens(user);
   }
 
-  private generateTokens(user: any): AuthResponse {
+  async login(user: Omit<User, 'password'>) {
+    return this.generateTokens(user);
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        phone: true,
+        rakiumClientId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  private generateTokens(user: Omit<User, 'password'>) {
     const payload = {
-      sub: user.id,
       email: user.email,
+      sub: user.id,
       role: user.role,
-      tenantId: user.tenantId,
-      tenantName: user.tenant?.name
     };
 
     return {
@@ -78,10 +92,11 @@ export class AuthService {
       }),
       user: {
         id: user.id,
-        email: user.email,
         name: user.name,
+        email: user.email,
         role: user.role,
-        tenantId: user.tenantId,
+        phone: user.phone,
+        rakiumClientId: user.rakiumClientId,
       },
     };
   }

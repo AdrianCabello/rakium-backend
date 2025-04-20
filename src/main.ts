@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -10,18 +10,12 @@ async function bootstrap() {
   app.enableCors();
 
   // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe());
 
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Rakium API')
-    .setDescription('The Rakium API documentation')
+    .setDescription('The Rakium API description')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

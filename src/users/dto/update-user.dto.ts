@@ -1,7 +1,10 @@
 import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateUserDto } from './create-user.dto';
+import { UserRole } from '@prisma/client';
 
-export class UpdateUserDto {
+export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiProperty({
     example: 'John',
     description: 'The first name of the user',
@@ -106,5 +109,5 @@ export class UpdateUserDto {
   })
   @IsString()
   @IsOptional()
-  role?: string;
+  role?: UserRole;
 } 

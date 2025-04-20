@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { User } from '@prisma/client';
 
 export type UserRole = 'admin' | 'client_admin' | 'client_user';
 
@@ -6,9 +7,12 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: UserRole;
-  tenantId: string;
 }
 
 export interface RequestWithUser extends Request {
-  user: JwtPayload;
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
 } 

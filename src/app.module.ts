@@ -1,26 +1,27 @@
-import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module, MiddlewareConsumer } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { TenantMiddleware } from './common/middlewares/tenant.middleware';
+import { AppointmentsModule } from './appointments/appointments.module';
+import { FinalUsersModule } from './final-users/final-users.module';
+import { RakiumClientsModule } from './rakium-clients/rakium-clients.module';
+import { SchedulesModule } from './schedules/schedules.module';
+import { ConfigModule } from './config/config.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    PrismaModule,
+    ConfigModule,
     AuthModule,
+    UsersModule,
+    PrismaModule,
+    AppointmentsModule,
+    FinalUsersModule,
+    RakiumClientsModule,
+    SchedulesModule,
   ],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TenantMiddleware)
-      .exclude(
-        { path: 'auth/login', method: RequestMethod.POST },
-        { path: 'auth/register', method: RequestMethod.POST },
-      )
-      .forRoutes('*');
-  }
-}
+export class AppModule {}
