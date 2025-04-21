@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -109,6 +109,30 @@ export class AuthService {
         throw error;
       }
       throw new InternalServerErrorException('Error getting user profile');
+    }
+  }
+
+  async updateUserRole(userId: string, role: UserRole) {
+    try {
+      const user = await this.prisma.user.update({
+        where: { id: userId },
+        data: { role },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          phone: true,
+          rakiumClientId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return user;
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      throw new InternalServerErrorException('Error updating user role');
     }
   }
 

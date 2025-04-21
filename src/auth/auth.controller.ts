@@ -1,9 +1,10 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, Patch, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, AuthResponse } from './dto/auth.dto';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -60,10 +61,48 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@Request() req) {
-    return this.authService.getProfile(req.user.sub);
+    if (!req.user || !req.user.id) {
+      throw new UnauthorizedException('Invalid token');
+    }
+    
+    return this.authService.getProfile(req.user.id);
+  }
+
+  @Patch('users/:id/role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update user role' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        role: {
+          type: 'string',
+          enum: ['admin', 'client_admin', 'client_user'],
+          description: 'The new role for the user'
+        }
+      }
+    },
+    examples: {
+      'Update to Admin': {
+        value: {
+          role: 'admin'
+        },
+        summary: 'Update user role to admin'
+      }
+    }
+  })
+  @ApiResponse({ status: 200, description: 'User role updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateUserRole(
+    @Param('id') id: string,
+    @Body('role') role: UserRole,
+  ) {
+    return this.authService.updateUserRole(id, role);
   }
 } 
