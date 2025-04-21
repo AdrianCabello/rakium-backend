@@ -1,7 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Request, UnauthorizedException, Patch, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto, AuthResponse } from './dto/auth.dto';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth, ApiSecurity } from '@nestjs/swagger';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from './decorators/public.decorator';
 import { UserRole } from '@prisma/client';
@@ -14,7 +14,10 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'User login' })
+  @ApiOperation({ 
+    summary: 'User login',
+    description: 'Authenticate a user and receive JWT tokens. Use the access token in the Authorization header for protected endpoints.'
+  })
   @ApiBody({
     type: LoginDto,
     examples: {
@@ -27,7 +30,11 @@ export class AuthController {
       }
     }
   })
-  @ApiResponse({ status: 200, description: 'Login successful', type: AuthResponse })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Login successful. Returns access and refresh tokens.',
+    type: AuthResponse 
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password);
@@ -39,7 +46,10 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  @ApiOperation({ summary: 'User registration' })
+  @ApiOperation({ 
+    summary: 'User registration',
+    description: 'Register a new user. By default, users are registered with the client_admin role.'
+  })
   @ApiBody({
     type: RegisterDto,
     examples: {
@@ -59,9 +69,60 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @Public()
+  @Get('dev-token')
+  @ApiOperation({ 
+    summary: 'Get development token',
+    description: 'Get a JWT token for development and testing purposes. This endpoint is only available in development mode.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Development token generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: {
+          type: 'string',
+          description: 'JWT access token for testing'
+        },
+        message: {
+          type: 'string',
+          description: 'Information about the token'
+        }
+      }
+    }
+  })
+  async getDevToken() {
+    // Only allow in development mode
+    if (process.env.NODE_ENV !== 'development') {
+      throw new UnauthorizedException('This endpoint is only available in development mode');
+    }
+
+    // Create a mock admin user with all required properties
+    const mockUser = {
+      id: 'dev-user-id',
+      email: 'dev@example.com',
+      name: 'Development User',
+      role: UserRole.admin,
+      phone: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      rakiumClientId: null,
+    };
+
+    // Generate tokens
+    const tokens = await this.authService.login(mockUser);
+
+    return {
+      accessToken: tokens.accessToken,
+      message: 'This is a development token. Do not use in production.',
+    };
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
+  @ApiSecurity('access-token')
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -76,6 +137,7 @@ export class AuthController {
   @Patch('users/:id/role')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
+  @ApiSecurity('access-token')
   @ApiOperation({ summary: 'Update user role' })
   @ApiBody({
     schema: {

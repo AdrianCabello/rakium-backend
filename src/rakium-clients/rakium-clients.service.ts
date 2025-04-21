@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRakiumClientDto } from './dto/create-rakium-client.dto';
 import { UpdateRakiumClientDto } from './dto/update-rakium-client.dto';
@@ -8,50 +8,122 @@ export class RakiumClientsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createRakiumClientDto: CreateRakiumClientDto) {
-    return this.prisma.rakiumClient.create({
-      data: createRakiumClientDto,
-    });
+    try {
+      return await this.prisma.rakiumClient.create({
+        data: createRakiumClientDto,
+      });
+    } catch (error) {
+      console.error('Error creating Rakium client:', error);
+      if (error.code === 'P2002') {
+        throw new InternalServerErrorException('Domain or email already exists');
+      }
+      throw new InternalServerErrorException('Error creating Rakium client');
+    }
   }
 
   async findAll() {
-    return this.prisma.rakiumClient.findMany({
-      include: {
-        users: true,
-        content: true,
-      },
-    });
+    try {
+      return await this.prisma.rakiumClient.findMany({
+        include: {
+          users: true,
+          content: true,
+        },
+      });
+    } catch (error) {
+      console.error('Error finding all Rakium clients:', error);
+      throw new InternalServerErrorException('Error retrieving Rakium clients');
+    }
   }
 
   async findOne(id: string) {
-    return this.prisma.rakiumClient.findUnique({
-      where: { id },
-      include: {
-        users: true,
-        content: true,
-        schedules: true,
-      },
-    });
+    try {
+      const client = await this.prisma.rakiumClient.findUnique({
+        where: { id },
+        include: {
+          users: true,
+          content: true,
+          schedules: true,
+        },
+      });
+
+      if (!client) {
+        throw new NotFoundException(`Rakium client with ID ${id} not found`);
+      }
+
+      return client;
+    } catch (error) {
+      console.error('Error finding Rakium client:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error retrieving Rakium client');
+    }
   }
 
   async update(id: string, updateRakiumClientDto: UpdateRakiumClientDto) {
-    return this.prisma.rakiumClient.update({
-      where: { id },
-      data: updateRakiumClientDto,
-    });
+    try {
+      const client = await this.prisma.rakiumClient.update({
+        where: { id },
+        data: updateRakiumClientDto,
+      });
+
+      if (!client) {
+        throw new NotFoundException(`Rakium client with ID ${id} not found`);
+      }
+
+      return client;
+    } catch (error) {
+      console.error('Error updating Rakium client:', error);
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Rakium client with ID ${id} not found`);
+      }
+      if (error.code === 'P2002') {
+        throw new InternalServerErrorException('Domain or email already exists');
+      }
+      throw new InternalServerErrorException('Error updating Rakium client');
+    }
   }
 
   async remove(id: string) {
-    return this.prisma.rakiumClient.delete({
-      where: { id },
-    });
+    try {
+      const client = await this.prisma.rakiumClient.delete({
+        where: { id },
+      });
+
+      if (!client) {
+        throw new NotFoundException(`Rakium client with ID ${id} not found`);
+      }
+
+      return client;
+    } catch (error) {
+      console.error('Error removing Rakium client:', error);
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Rakium client with ID ${id} not found`);
+      }
+      throw new InternalServerErrorException('Error removing Rakium client');
+    }
   }
 
   async findByDomain(domain: string) {
-    return this.prisma.rakiumClient.findUnique({
-      where: { domain },
-      include: {
-        content: true,
-      },
-    });
+    try {
+      const client = await this.prisma.rakiumClient.findUnique({
+        where: { domain },
+        include: {
+          content: true,
+        },
+      });
+
+      if (!client) {
+        throw new NotFoundException(`Rakium client with domain ${domain} not found`);
+      }
+
+      return client;
+    } catch (error) {
+      console.error('Error finding Rakium client by domain:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Error retrieving Rakium client by domain');
+    }
   }
 } 
