@@ -9,6 +9,7 @@ import { FinalUsersModule } from './final-users/final-users.module';
 import { RakiumClientsModule } from './rakium-clients/rakium-clients.module';
 import { SchedulesModule } from './schedules/schedules.module';
 import { ConfigModule } from './config/config.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ConfigModule } from './config/config.module';
     FinalUsersModule,
     RakiumClientsModule,
     SchedulesModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
